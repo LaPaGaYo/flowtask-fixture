@@ -48,3 +48,21 @@ test('production imports form an acyclic graph and respect layer direction', () 
   for (const path of files) visit(path)
   expect(violations).toEqual([])
 })
+
+test('every exported function or const is referenced by name in a test', () => {
+  const source = sourceFiles()
+  const integration = readdirSync(resolve('tests'), { recursive: true, withFileTypes: true })
+    .filter(entry => entry.isFile() && entry.name.endsWith('.test.ts'))
+    .map(entry => resolve(entry.parentPath, entry.name))
+  const testText = [...source.filter(path => path.endsWith('.test.ts')), ...integration]
+    .map(path => readFileSync(path, 'utf8')).join('\n')
+  const missing = source.filter(path => !path.endsWith('.test.ts') && !path.includes('/test-helpers/')).flatMap(path => {
+    const declarations = readFileSync(path, 'utf8').matchAll(/\bexport\s+(?:async\s+)?(?:function|const|class)\s+([\w$]+)/g)
+    return [...declarations].flatMap(match => {
+      const name = match[1] ?? ''
+      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      return new RegExp(`\\b${escaped}\\b`).test(testText) ? [] : [`${relative(root, path)}: ${name}`]
+    })
+  })
+  expect(missing, `Exports missing test references:\n${missing.join('\n')}`).toEqual([])
+})
