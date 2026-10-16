@@ -5,6 +5,8 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     pool: 'forks',
+    reporters: ['./tests/helpers/deterministic-reporter.ts'],
+    maxWorkers: 4,
     retry: 0,
     testTimeout: 20_000,
     hookTimeout: 30_000,
