@@ -62,3 +62,17 @@ node dist/server.js --data .flowtask-data/store.json --now 2024-01-08T12:00:00Z 
 `node dist/cli.js serve` offers the same server. Both support `--stdio` for HTTP
 on process pipes without a listener. See [CLI](docs/CLI.md), [API](docs/API.md),
 [architecture](docs/ARCHITECTURE.md), and [delivery evidence](REPORT-FT-01.md).
+
+## Fixture use
+
+[Fixture manifest v1](fixture-manifest.v1.json) describes five scripted scenarios:
+deterministic test failure, merge-only conflict, Agent crash/hang, retry and
+stale completion. [GOAL.md](GOAL.md) supplies a planning goal with a reference
+12-task decomposition; it is not implemented by this fixture release.
+
+Run `pnpm run verify:fixture` for application checks, script tests and isolated
+scenario replay. Run `pnpm run qualify` on a clean checkout to qualify the host;
+it checks exact toolchain pins, size, repeatable output and time budgets.
+Scenarios use temporary HEAD archives and symlink existing `node_modules`.
+See [fixture operations](docs/FIXTURE.md) for the manifest contract, Worker CLI,
+Axiom/Orca expectations and verifier-owned `fixture-v1` freeze procedure.
