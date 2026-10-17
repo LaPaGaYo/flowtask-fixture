@@ -1,0 +1,117 @@
+{
+  "manifestVersion": 1,
+  "fixture": {"name": "flowtask", "repository": "https://github.com/LaPaGaYo/flowtask-fixture", "license": "MIT", "baselineRef": "fixture-v1", "toolchain": {"node": "22", "pnpm": "10.34.7", "typescript": "7.0.2", "vitest": "4.1.12", "oxlint": "1.88.0"}},
+  "checks": {"typecheck": {"command": "pnpm run typecheck"}, "lint": {"command": "pnpm run lint"}, "unit": {"command": "pnpm run test:unit"}, "build": {"command": "pnpm run build"}, "integration": {"command": "pnpm run test:integration"}, "fast": {"command": "pnpm run verify:fast", "budgetSeconds": 180}, "full": {"command": "pnpm run verify:full", "budgetSeconds": 480}},
+  "size": {"trackedFilesMin": 150, "trackedFilesMax": 500, "testFilesMin": 20},
+  "goal": {"id": "goal-sprints-v1", "title": "Sprints and planning", "statementFile": "GOAL.md", "referenceDecompositionFile": "scenarios/goal/decomposition.json"},
+  "scenarios": [
+    {
+      "id": "deterministic-failure",
+      "exercises": ["axiom-v1-success-criterion-5", "NEEDS_FIX"],
+      "folder": "scenarios/deterministic-failure",
+      "inputs": ["candidate.patch", "fix.patch"],
+      "steps": [
+        "candidate (tree candidate): git apply scenarios/deterministic-failure/candidate.patch",
+        "typecheck (tree candidate): pnpm run typecheck",
+        "lint (tree candidate): pnpm run lint",
+        "one-failure (tree candidate): pnpm run test:unit",
+        "fix (tree candidate): git apply scenarios/deterministic-failure/fix.patch",
+        "fixed (tree candidate): pnpm run verify:full"
+      ],
+      "expected": [
+        {"id": "candidate", "tree": "candidate", "action": {"kind": "patch", "input": "candidate.patch"}, "exitCode": 0, "apply": "accepted"},
+        {"id": "typecheck", "tree": "candidate", "action": {"kind": "check"}, "check": "typecheck", "exitCode": 0},
+        {"id": "lint", "tree": "candidate", "action": {"kind": "check"}, "check": "lint", "exitCode": 0},
+        {"id": "one-failure", "tree": "candidate", "action": {"kind": "check"}, "check": "unit", "exitCode": 1, "failingTest": "src/domain/recurrence.test.ts > advances daily, weekly, interval and clamped monthly dates"},
+        {"id": "fix", "tree": "candidate", "action": {"kind": "patch", "input": "fix.patch"}, "exitCode": 0, "apply": "accepted"},
+        {"id": "fixed", "tree": "candidate", "action": {"kind": "check"}, "check": "full", "exitCode": 0}
+      ]
+    },
+    {
+      "id": "merge-only-failure",
+      "exercises": ["FIX_TASK", "CONFLICT", "NEEDS_FIX"],
+      "folder": "scenarios/merge-only-failure",
+      "inputs": ["semantic/a.patch", "semantic/b.patch", "textual/a.patch", "textual/b.patch"],
+      "steps": [
+        "semantic-a (tree semantic-a): git apply scenarios/merge-only-failure/semantic/a.patch",
+        "semantic-a-alone (tree semantic-a): pnpm run verify:full",
+        "semantic-b (tree semantic-b): git apply scenarios/merge-only-failure/semantic/b.patch",
+        "semantic-b-alone (tree semantic-b): pnpm run verify:full",
+        "semantic-combine (tree semantic-a): git apply scenarios/merge-only-failure/semantic/b.patch",
+        "semantic-combined (tree semantic-a): pnpm run test:unit",
+        "textual-a (tree textual-a): git apply scenarios/merge-only-failure/textual/a.patch",
+        "textual-a-alone (tree textual-a): pnpm run verify:full",
+        "textual-b (tree textual-b): git apply scenarios/merge-only-failure/textual/b.patch",
+        "textual-b-alone (tree textual-b): pnpm run verify:full",
+        "textual-rejected (tree textual-a): git apply --check scenarios/merge-only-failure/textual/b.patch"
+      ],
+      "expected": [
+        {"id": "semantic-a", "tree": "semantic-a", "action": {"kind": "patch", "input": "semantic/a.patch"}, "exitCode": 0, "apply": "accepted"},
+        {"id": "semantic-a-alone", "tree": "semantic-a", "action": {"kind": "check"}, "check": "full", "exitCode": 0},
+        {"id": "semantic-b", "tree": "semantic-b", "action": {"kind": "patch", "input": "semantic/b.patch"}, "exitCode": 0, "apply": "accepted"},
+        {"id": "semantic-b-alone", "tree": "semantic-b", "action": {"kind": "check"}, "check": "full", "exitCode": 0},
+        {"id": "semantic-combine", "tree": "semantic-a", "action": {"kind": "patch", "input": "semantic/b.patch"}, "exitCode": 0, "apply": "accepted"},
+        {"id": "semantic-combined", "tree": "semantic-a", "action": {"kind": "check"}, "check": "unit", "exitCode": 1, "failingTest": "src/services/date-range-contract.test.ts > dateRange keeps stable validation wording", "message": "Invalid date boundaries"},
+        {"id": "textual-a", "tree": "textual-a", "action": {"kind": "patch", "input": "textual/a.patch"}, "exitCode": 0, "apply": "accepted"},
+        {"id": "textual-a-alone", "tree": "textual-a", "action": {"kind": "check"}, "check": "full", "exitCode": 0},
+        {"id": "textual-b", "tree": "textual-b", "action": {"kind": "patch", "input": "textual/b.patch"}, "exitCode": 0, "apply": "accepted"},
+        {"id": "textual-b-alone", "tree": "textual-b", "action": {"kind": "check"}, "check": "full", "exitCode": 0},
+        {"id": "textual-rejected", "tree": "textual-a", "action": {"kind": "patch", "input": "textual/b.patch", "checkOnly": true}, "exitCode": 1, "apply": "rejected", "message": "patch does not apply"}
+      ]
+    },
+    {
+      "id": "agent-crash",
+      "exercises": ["agent-crash-recovery", "unverifiable", "no-duplicate-attempt"],
+      "folder": "scenarios/agent-crash",
+      "inputs": ["../stub-worker/worker.mjs"],
+      "steps": [
+        "crash (tree crash): node scenarios/stub-worker/worker.mjs --scenario agent-crash --attempt 1 --mode crash --cwd <crash>",
+        "hang (tree hang): node scenarios/stub-worker/worker.mjs --scenario agent-crash --attempt 1 --mode hang --cwd <hang>",
+        "succeed (tree succeed): node scenarios/stub-worker/worker.mjs --scenario agent-crash --attempt 1 --mode succeed --cwd <succeed>"
+      ],
+      "expected": [
+        {"id": "crash", "tree": "crash", "action": {"kind": "worker", "attempt": 1, "mode": "crash"}, "exitCode": null, "shellExitCode": 137, "signal": "SIGKILL", "file": "src/services/half-written.ts", "report": false},
+        {"id": "hang", "tree": "hang", "action": {"kind": "worker", "attempt": 1, "mode": "hang"}, "heartbeat": true, "alive": true, "report": false},
+        {"id": "succeed", "tree": "succeed", "action": {"kind": "worker", "attempt": 1, "mode": "succeed"}, "exitCode": 0, "report": true}
+      ]
+    },
+    {
+      "id": "retry",
+      "exercises": ["NEEDS_FIX", "same-mission-retry"],
+      "folder": "scenarios/retry",
+      "inputs": ["attempt-1.patch", "attempt-2.patch", "../stub-worker/worker.mjs"],
+      "steps": [
+        "attempt-1 (tree retry): node scenarios/stub-worker/worker.mjs --scenario retry --attempt 1 --mode succeed --cwd <retry>",
+        "incomplete (tree retry): pnpm run test:unit",
+        "attempt-2 (tree retry): node scenarios/stub-worker/worker.mjs --scenario retry --attempt 2 --mode succeed --cwd <retry>",
+        "complete (tree retry): pnpm run verify:full"
+      ],
+      "expected": [
+        {"id": "attempt-1", "tree": "retry", "action": {"kind": "worker", "attempt": 1, "mode": "succeed"}, "exitCode": 0, "report": true},
+        {"id": "incomplete", "tree": "retry", "action": {"kind": "check"}, "check": "unit", "exitCode": 1, "failingTest": "src/services/date-range.test.ts > dateRange accepts inclusive and optional boundaries: {\"to\":\"2024-02-29\",\"entityId\":\"\"}"},
+        {"id": "attempt-2", "tree": "retry", "action": {"kind": "worker", "attempt": 2, "mode": "succeed"}, "exitCode": 0, "report": true},
+        {"id": "complete", "tree": "retry", "action": {"kind": "check"}, "check": "full", "exitCode": 0}
+      ]
+    },
+    {
+      "id": "stale-completion",
+      "exercises": ["stale-base", "stale_dispatch", "inactive_dispatch"],
+      "folder": "scenarios/stale-completion",
+      "inputs": ["first.patch", "stale.patch"],
+      "steps": [
+        "first (tree advanced): git apply scenarios/stale-completion/first.patch",
+        "advanced-base (tree advanced): pnpm run verify:full",
+        "stale-original (tree old): git apply scenarios/stale-completion/stale.patch",
+        "stale-original-full (tree old): pnpm run verify:full",
+        "stale-rejected (tree advanced): git apply --check scenarios/stale-completion/stale.patch"
+      ],
+      "expected": [
+        {"id": "first", "tree": "advanced", "action": {"kind": "patch", "input": "first.patch"}, "exitCode": 0, "apply": "accepted"},
+        {"id": "advanced-base", "tree": "advanced", "action": {"kind": "check"}, "check": "full", "exitCode": 0},
+        {"id": "stale-original", "tree": "old", "action": {"kind": "patch", "input": "stale.patch"}, "exitCode": 0, "apply": "accepted"},
+        {"id": "stale-original-full", "tree": "old", "action": {"kind": "check"}, "check": "full", "exitCode": 0},
+        {"id": "stale-rejected", "tree": "advanced", "action": {"kind": "patch", "input": "stale.patch", "checkOnly": true}, "exitCode": 1, "apply": "rejected", "message": "patch does not apply"}
+      ]
+    }
+  ]
+}

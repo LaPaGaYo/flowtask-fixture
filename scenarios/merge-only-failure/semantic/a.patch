@@ -1,0 +1,23 @@
+diff --git a/src/services/date-range.test.ts b/src/services/date-range.test.ts
+--- a/src/services/date-range.test.ts
++++ b/src/services/date-range.test.ts
+@@ -10,3 +10,7 @@ test.each([null, [], '', { unknown: '' }, { from: '' }, { to: null }, { from: '2
+   { to: '10000-01-01' }, { entityId: 1 }, { from: '2024-01-02', to: '2024-01-01' }])('dateRange rejects invalid input: %j', input => {
+   expect(dateRange(input)).toMatchObject({ ok: false, error: { code: 'validation' } })
+ })
++
++test('dateRange explains invalid boundaries', () => {
++  expect(dateRange({ from: '' })).toMatchObject({ error: { message: 'Invalid date boundaries' } })
++})
+diff --git a/src/services/date-range.ts b/src/services/date-range.ts
+--- a/src/services/date-range.ts
++++ b/src/services/date-range.ts
+@@ -7,7 +7,7 @@ export function dateRange(input: unknown): Result<{ from?: string; to?: string;
+   const { from, to, entityId } = fields.value
+   if ((from !== undefined && !isDate(from)) || (to !== undefined && !isDate(to))
+     || (entityId !== undefined && typeof entityId !== 'string') || (typeof from === 'string' && typeof to === 'string' && from > to)) {
+-    return fail('validation', 'Invalid date range')
++    return fail('validation', 'Invalid date boundaries')
+   }
+   return ok({ ...(typeof from === 'string' ? { from } : {}), ...(typeof to === 'string' ? { to } : {}),
+     ...(typeof entityId === 'string' ? { entityId } : {}) })

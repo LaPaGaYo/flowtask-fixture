@@ -1,0 +1,12 @@
+diff --git a/src/domain/recurrence.ts b/src/domain/recurrence.ts
+--- a/src/domain/recurrence.ts
++++ b/src/domain/recurrence.ts
+@@ -39,7 +39,7 @@ export function nextOccurrence(rule: Recurrence, anchor: string, after: string):
+     const last = new Date(cursor)
+     last.setUTCMonth(last.getUTCMonth() + 1)
+     last.setUTCDate(0)
+-    cursor.setUTCDate(Math.min(rule.day, last.getUTCDate()))
++    cursor.setUTCDate(rule.day)
+     const candidate = cursor.toISOString().split('T')[0] ?? ''
+     if (cursor.getTime() > Date.parse(lower)) return candidate
+     cursor.setUTCDate(1)

@@ -14,6 +14,8 @@ imports from domain into storage/services, or between CLI and API. The CLI's
 | `src/api` | One route per file, JSON body parsing, error mapping, HTTP lifecycle |
 | `tests/helpers` | Fixed workspaces, executable/HTTP-pipe clients, deterministic reporter |
 | `tests/integration` | Built process persistence, migration, transfer, transport, and shutdown |
+| `scenarios/` | Scripted patch inputs, stub Worker and reference planning DAG; never app runtime |
+| `scripts/` | Built-in Node qualification/scenario runners and separately invoked script tests |
 | `src/checks` | Module size, forbidden constructs, dependency direction/cycles, reporter tests |
 
 ## Invariants

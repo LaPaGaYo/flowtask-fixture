@@ -1,0 +1,12 @@
+diff --git a/src/services/date-range.ts b/src/services/date-range.ts
+--- a/src/services/date-range.ts
++++ b/src/services/date-range.ts
+@@ -6,7 +6,7 @@ export function dateRange(input: unknown): Result<{ from?: string; to?: string;
+   if (!fields.ok) return fields
+   const { from, to, entityId } = fields.value
+   if ((from !== undefined && !isDate(from)) || (to !== undefined && !isDate(to))
+-    || (entityId !== undefined && typeof entityId !== 'string') || (typeof from === 'string' && typeof to === 'string' && from > to)) {
++    || (entityId !== undefined && (typeof entityId !== 'string' || entityId.length === 0)) || (typeof from === 'string' && typeof to === 'string' && from > to)) {
+     return fail('validation', 'Invalid date range')
+   }
+   return ok({ ...(typeof from === 'string' ? { from } : {}), ...(typeof to === 'string' ? { to } : {}),

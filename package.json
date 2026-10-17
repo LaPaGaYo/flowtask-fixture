@@ -18,7 +18,11 @@
     "build": "tsc -p tsconfig.build.json",
     "test:integration": "vitest run --dir tests/integration",
     "verify:fast": "pnpm run typecheck && pnpm run lint && pnpm run test:unit",
-    "verify:full": "pnpm run verify:fast && pnpm run build && pnpm run test:integration"
+    "verify:full": "pnpm run verify:fast && pnpm run build && pnpm run test:integration",
+    "qualify": "node scripts/qualify.mjs",
+    "scenarios:check": "node scripts/scenarios-check.mjs",
+    "test:scripts": "vitest run --dir scripts --config scripts/vitest.config.mjs",
+    "verify:fixture": "pnpm run verify:full && pnpm run test:scripts && pnpm run scenarios:check"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
