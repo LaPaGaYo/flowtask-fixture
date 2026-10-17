@@ -63,11 +63,20 @@ banner; use `node scripts/qualify.mjs` or `node scripts/scenarios-check.mjs` for
 bare JSON). A failed gate yields nonzero exit. Runtime targets are three minutes
 for scenarios and 180/480 seconds for qualification fast/full gates.
 
-Qualification runs fast twice and compares raw stdout and stderr bytes, runs full
+Qualification runs fast twice and compares normalized stdout and stderr, runs full
 once, records durations and platform/architecture/CPU count and verifies pins,
 tracked/test counts, and a clean tracked/untracked tree except `dist/`. It does
-not normalize nondeterministic logs or forgive pre-existing changes. Failures
+not forgive pre-existing changes. Failures
 retain check output. Duration is the only time-dependent report data.
+
+For `fast-identical`, "byte-identical" means equality after replacing only
+timing tokens matching `\b\d+(\.\d+)?(ms|s)\b` on lines starting with `Finished in`
+with `<duration>`. This includes oxlint's `Finished in 5ms on 163 files using 12
+threads.` and additional millisecond/second tokens on those lines. File/thread
+counts, other lines (including pnpm banners and test summaries), whitespace and
+line endings remain unchanged. A mismatch reports `firstDifference`: stream,
+1-based line number, and both normalized lines truncated to 200 characters;
+`null` denotes a missing line. Byte counts retain the first run's raw sizes.
 
 Scenario execution uses `git archive HEAD` and `tar` into unique temporary
 directories. It writes no Git metadata, leaves the main checkout untouched, and

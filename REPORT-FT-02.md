@@ -68,7 +68,8 @@ index, tag or Git metadata change was made. No network or installation was used.
 Host: macOS arm64, 12 CPUs, Node v22.23.3, pnpm 10.34.7. The pinned binaries are
 preinstalled at `/Users/henry/.nvm/versions/node/v22.23.3/bin` and were selected via
 PATH. `/usr/bin/time -p` measured each command with combined output captured
-separately from timing output. Both fast outputs are byte-identical. Fast/full
+separately from timing output. Both captured fast outputs happened to be
+byte-identical; oxlint timings vary, so raw equality is not guaranteed. Fast/full
 remain below twice FT-01's 2.72/4.13-second measurements.
 
 | Command | Wall clock | Exit |
@@ -117,3 +118,48 @@ The one unmet mandatory gate is green qualification on a clean checkout.
 Launcher: commit this handoff. Verifier: rerun verify:fixture and qualify on the
 clean resulting HEAD, create immutable fixture-v1, and record its commit in
 Axiom's fixture-version Decision. Do not claim frozen-host acceptance until then.
+
+## Attempt 2
+
+Scope: address the verifier's `fast-identical` failure only. The raw comparison
+included oxlint's variable duration; matching output in attempt 1 was incidental.
+`normalizeCheckOutput` now replaces only millisecond/second tokens on lines
+starting with `Finished in`. Both stdout and stderr are compared after that
+normalization; file/thread counts and other output remain significant.
+Remaining differences report the stream, first differing 1-based line, and both
+normalized lines capped at 200 characters (`null` means a missing line).
+`docs/FIXTURE.md` records this contract; the earlier raw-equality sentence is
+corrected above. Other attempt-1 sections remain historical evidence.
+
+Test-first verification reproduced six gate failures before implementation;
+adding the direct normalizer tests produced eight expected failures. After the
+fix, all 23 script tests pass. Coverage includes duration-only stdout/stderr
+differences, real test-summary differences and their exact line diagnostics,
+preserved file/thread counts, other timing text, truncation and missing lines.
+A focused independent read-only review found no issues.
+
+Sequential measurements used `/usr/bin/time -p` with the installed Node v22.23.3
+and pnpm 10.34.7 selected via PATH, without network or dependency installation.
+
+| Command | Wall clock | Exit / result |
+| --- | --- | --- |
+| `pnpm run verify:fixture` | 49.63 s | 0; 214 unit, 20 integration, 23 script tests; all 29 scenario steps pass |
+| `pnpm run qualify` | 10.05 s | 1; only `clean` fails; `fast-identical` passes |
+| `pnpm run test:scripts` | 0.74 s | 0; 23 passed, 0 failed |
+
+Within qualification, fast runs took 2.620 s and 2.637 s; full took 4.345 s.
+Counts are 254 tracked files and 62 tracked `.test.ts` files. Only the four
+requested files changed; application, scenarios, patches, manifest, worker,
+dependencies and lockfile are unchanged. No commit, push or Git metadata write
+was performed. The accepted scenario negative control remains recorded above.
+
+Qualification JSON from this uncommitted tree:
+
+```json
+{"pass":false,"host":{"platform":"darwin","arch":"arm64","cpus":12,"node":"v22.23.3","pnpm":"10.34.7"},"gates":[{"id":"node","measured":"v22.23.3","pass":true},{"id":"pnpm","measured":"10.34.7","pass":true},{"id":"tracked-files","measured":254,"pass":true},{"id":"test-files","measured":62,"pass":true},{"id":"fast-1","measured":{"exitCode":0,"signal":null,"durationSeconds":2.61975625},"pass":true},{"id":"fast-2","measured":{"exitCode":0,"signal":null,"durationSeconds":2.637460083},"pass":true},{"id":"fast-identical","measured":{"stdoutBytes":481,"stderrBytes":0},"pass":true},{"id":"full","measured":{"exitCode":0,"signal":null,"durationSeconds":4.345415709},"pass":true},{"id":"clean","measured":["REPORT-FT-02.md","docs/FIXTURE.md","scripts/qualify.mjs","scripts/qualify.test.mjs"],"pass":false}],"failures":[]}
+```
+
+Attempt-2 correction, review and fixture verification are complete for launcher
+handoff. Qualification is not green on the uncommitted tree: only the unchanged
+clean gate rejects the four pending files. The verifier must rerun qualification
+on the committed candidate before milestone acceptance/freeze.

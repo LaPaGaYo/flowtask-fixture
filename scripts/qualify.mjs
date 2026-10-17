@@ -4,9 +4,29 @@ import os from 'node:os'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
+export function normalizeCheckOutput(text) {
+  return text.replace(/^Finished in\b[^\r\n]*/gm,
+    line => line.replace(/\b\d+(\.\d+)?(ms|s)\b/g, '<duration>'))
+}
+
+function firstOutputDifference(runs) {
+  for (const stream of ['stdout', 'stderr']) {
+    const [first, second] = runs.map(run => normalizeCheckOutput(run[stream]))
+    if (first === second) continue
+    const lines1 = first.split('\n')
+    const lines2 = second.split('\n')
+    for (let index = 0; index < Math.max(lines1.length, lines2.length); index++) {
+      if (lines1[index] !== lines2[index]) return { stream, line: index + 1,
+        run1: lines1[index]?.slice(0, 200) ?? null, run2: lines2[index]?.slice(0, 200) ?? null }
+    }
+  }
+  return null
+}
+
 export function evaluateQualification(data) {
   const gate = (id, measured, pass) => ({ id, measured, pass })
   const successful = run => run.exitCode === 0 && run.signal === null
+  const firstDifference = firstOutputDifference(data.fast)
   return [
     gate('node', data.node, /^v22\./.test(data.node)),
     gate('pnpm', data.pnpm, data.pnpm === data.requiredPnpm),
@@ -15,8 +35,9 @@ export function evaluateQualification(data) {
     ...data.fast.map((run, index) => gate(`fast-${index + 1}`, {
       exitCode: run.exitCode, signal: run.signal, durationSeconds: run.durationSeconds,
     }, successful(run) && run.durationSeconds <= 180)),
-    gate('fast-identical', { stdoutBytes: Buffer.byteLength(data.fast[0].stdout), stderrBytes: Buffer.byteLength(data.fast[0].stderr) },
-      data.fast[0].stdout === data.fast[1].stdout && data.fast[0].stderr === data.fast[1].stderr),
+    gate('fast-identical', { stdoutBytes: Buffer.byteLength(data.fast[0].stdout),
+      stderrBytes: Buffer.byteLength(data.fast[0].stderr), ...(firstDifference ? { firstDifference } : {}) },
+    firstDifference === null),
     gate('full', { exitCode: data.full.exitCode, signal: data.full.signal, durationSeconds: data.full.durationSeconds },
       successful(data.full) && data.full.durationSeconds <= 480),
     gate('clean', data.dirtyPaths, data.dirtyPaths.length === 0),
